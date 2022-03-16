@@ -129,3 +129,23 @@ def t_batch_update(data):
 
   print("T-Batch ends !")
   return tbatch_interaction
+
+def train_test_split(sort_data,prop_train):
+  df = sort_data.copy()  
+  nb_user = np.unique(sort_data["user_id"]).shape[0]
+  prop_test = 1 - prop_train
+
+  train_df = pd.DataFrame(columns=sort_data.columns)
+  test_df = pd.DataFrame(columns=sort_data.columns)
+
+  for user in range(nb_user):
+    if user%1000==0:
+      print(user)
+
+    len = df[df["user_id"]==user].shape[0]
+    test_df = test_df.append(df[df["user_id"]==user].groupby(["user_id"]).tail(1+int(len*prop_test)))
+
+  train_df = sort_data.drop(test_df.index).sort_values(["timestamp"])
+  test_df = test_df.sort_values(["timestamp"])
+
+  return train_df, test_df
