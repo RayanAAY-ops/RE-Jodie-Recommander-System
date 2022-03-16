@@ -29,6 +29,7 @@ def dynamic_embedding(data,embedding_dim):
         num_items = len(torch.unique(data[:,1]))
         dynamic_users_embedding = F.normalize(torch.randn(num_users,embedding_dim))
         dynamic_items_embedding = F.normalize(torch.randn(num_items,embedding_dim))
+
         print("Initialisation of dynamic embedding... Done !")
         print("Dynamic Embedding shape : Users {}, \t Items {}".format(list(dynamic_users_embedding.size()),list(dynamic_items_embedding.size())))
 
@@ -39,6 +40,7 @@ class RODIE(torch.nn.Module):
 
     def __init__(self,embedding_dim,data,activation_rnn="tanh",MLP_h_dim=50,option="user_state"):
         super(RODIE, self).__init__()
+        self.weight = torch.Tensor([1,change_state_ratio]).to(device)
         self.option = option
         self.embedding_dim = embedding_dim
         self.activation_rnn = activation_rnn
@@ -51,6 +53,7 @@ class RODIE(torch.nn.Module):
         num_users = len(torch.unique(data[:,0]))
 
         num_items = len(torch.unique(data[:,1]))
+
 
         print("Number of users of {} \n Number of items {} \n".format(num_users,num_items))
         print("Dataset size {}".format(list(self.data.size())))
@@ -77,7 +80,7 @@ class RODIE(torch.nn.Module):
 
         self.user_rnn = RNNCell(input_rnn_item_dim,self.embedding_dim, nonlinearity = self.activation_rnn)
 
-        print("Initialisation of rnn's... Done !")
+        print("Initialisation of rnn's with {} activation function... Done !".format(self.activation_rnn))
 
         # Projection layer -> projection operation   
         self.projection_layer = NormalLinear(1,self.embedding_dim, bias=False)
@@ -105,9 +108,12 @@ class RODIE(torch.nn.Module):
                                   dynamic_user_embedding,
                                   features,
                                   delta_i.reshape(-1,1)
-      ],
-                                  axis=1)
+      ],axis=1)
+                                 
+
       
+      concat_input = F.normalize(concat_input)
+      dynamic_item_embedding = F.normalize(dynamic_item_embedding)  
       return F.normalize(self.item_rnn(concat_input,dynamic_item_embedding))
 
 
@@ -118,15 +124,18 @@ class RODIE(torch.nn.Module):
                         dynamic_item_embedding,# at t-1
                         features,
                         delta_u):
-        concat_input = torch.concat([
-                                    dynamic_item_embedding,
-                                    features,
-                                    delta_u.reshape(-1,1)]
-                                    ,axis=1)
-        
- 
+      concat_input = torch.concat([
+                                  dynamic_item_embedding,
+                                  features,
+                                  delta_u.reshape(-1,1)]
+                                  ,axis=1)
+      
 
-        return F.normalize(self.user_rnn(concat_input,dynamic_user_embedding))
+      concat_input = F.normalize(concat_input)
+      dynamic_user_embedding = F.normalize(dynamic_user_embedding)  
+      
+             
+      return F.normalize(self.user_rnn(concat_input,dynamic_user_embedding))
 
     
 
@@ -175,31 +184,29 @@ class RODIE(torch.nn.Module):
       # New dynamic embedding of the item
       future_item_embedding= self.update_item_rnn(actual_item_embedding,actual_user_embedding,f,delta_i)     
 
-      projected_user_embedding = self.projection_operation(future_user_embedding,delta_i)
 
 
-      if self.option =="interaction_prediction":
+      #if self.option =="interaction_prediction":
+      projected_user_embedding = self.projection_operation(future_user_embedding,delta_u)
 
-        j_tilde = self.predict_item_embedding(
-          projected_user_embedding,
-          u_static,
-          future_item_embedding,
-          i_static)
-      
-        # The real next item embedding j_true, is the concatenation of the static and dynamic embedding of the next item 
-        j_true = torch.concat([next_item_dynamic_embedding,next_item_static_embedding],axis=1)
+      j_tilde = self.predict_item_embedding(
+        projected_user_embedding,
+        u_static,
+        future_item_embedding,
+        i_static)
+    
+      # The real next item embedding j_true, is the concatenation of the static and dynamic embedding of the next item 
+      j_true = torch.concat([next_item_dynamic_embedding,next_item_static_embedding],axis=1)
 
-        # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
-        loss = MSELoss()(j_tilde,j_true)
-        loss += regularizer(actual_user_embedding,future_user_embedding,self.lambda_u,
-                               actual_item_embedding,future_item_embedding,self.lambda_i
-                               )
+      # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
+      loss = MSELoss()(j_tilde,j_true)
+      loss += regularizer(actual_user_embedding,future_user_embedding,1e-3,
+                            actual_item_embedding,future_item_embedding,1e-3
+                            )
         
 
-
-      else:
         # Prediction of next state of the user using an MLP at the end
-        u_tilde = self.predict_user_state(projected_user_embedding)
-        loss = CrossEntropyLoss()(u_tilde,next_state_label)
+      u_pred = self.predict_user_state(future_user_embedding)
+      loss += CrossEntropyLoss(self.weight)(u_pred,next_state_label)
 
       return future_user_embedding,future_item_embedding,loss
