@@ -3,15 +3,7 @@ from  torch import nn
 from torch.nn import RNNCell
 from torch.nn.functional import one_hot
 import math
-from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
 from torch.nn import functional as F
-
-def regularizer(actual_user_embedding,future_user_embedding,lambda_u,
-                               actual_item_embedding,future_item_embedding,lambda_i
-                               ):
-    u_regularization_loss =  MSELoss()(actual_user_embedding,future_user_embedding)
-    i_regularization_loss =  MSELoss()(actual_item_embedding,future_item_embedding)
-    return lambda_u* u_regularization_loss + lambda_i* i_regularization_loss 
 
 
 ## This custom class of Linear, enables to initialize the weights of the layer to belong to a normal distribution ##
@@ -38,9 +30,8 @@ def dynamic_embedding(data,embedding_dim):
 
 class RODIE(torch.nn.Module):
 
-    def __init__(self,embedding_dim,data,activation_rnn="tanh",MLP_h_dim=50,option="user_state"):
+    def __init__(self,embedding_dim,data,device,activation_rnn="relu",MLP_h_dim=50,option="user_state"):
         super(RODIE, self).__init__()
-        self.weight = torch.Tensor([1,change_state_ratio]).to(device)
         self.option = option
         self.embedding_dim = embedding_dim
         self.activation_rnn = activation_rnn
@@ -83,7 +74,7 @@ class RODIE(torch.nn.Module):
         print("Initialisation of rnn's with {} activation function... Done !".format(self.activation_rnn))
 
         # Projection layer -> projection operation   
-        self.projection_layer = NormalLinear(1,self.embedding_dim, bias=False)
+        self.projection_layer = nn.Linear(1,self.embedding_dim, bias=False)
         # Predict next item embedding layer
         self.predictItem_layer = nn.Linear(static_item_embedding_dim + static_user_embedding_dim  + 2*self.embedding_dim, static_item_embedding_dim + self.embedding_dim, bias=True)
 
@@ -133,8 +124,8 @@ class RODIE(torch.nn.Module):
 
       concat_input = F.normalize(concat_input)
       dynamic_user_embedding = F.normalize(dynamic_user_embedding)  
-      
-             
+
+
       return F.normalize(self.user_rnn(concat_input,dynamic_user_embedding))
 
     
@@ -155,7 +146,7 @@ class RODIE(torch.nn.Module):
         i_dynamic,
         i_static
         ):
-        concatenated_input = torch.concat((u_projection,u_static,i_dynamic,i_static),axis=1)
+        concatenated_input = torch.concat([u_projection,i_dynamic,i_static,u_static],axis=1)
         j_tilde = self.predictItem_layer(concatenated_input)
         return j_tilde
 
@@ -185,28 +176,20 @@ class RODIE(torch.nn.Module):
       future_item_embedding= self.update_item_rnn(actual_item_embedding,actual_user_embedding,f,delta_i)     
 
 
+      # Projection of the user
 
-      #if self.option =="interaction_prediction":
       projected_user_embedding = self.projection_operation(future_user_embedding,delta_u)
 
+      # Predict next item
       j_tilde = self.predict_item_embedding(
         projected_user_embedding,
         u_static,
         future_item_embedding,
         i_static)
-    
+      
       # The real next item embedding j_true, is the concatenation of the static and dynamic embedding of the next item 
       j_true = torch.concat([next_item_dynamic_embedding,next_item_static_embedding],axis=1)
-
-      # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
-      loss = MSELoss()(j_tilde,j_true)
-      loss += regularizer(actual_user_embedding,future_user_embedding,1e-3,
-                            actual_item_embedding,future_item_embedding,1e-3
-                            )
-        
-
         # Prediction of next state of the user using an MLP at the end
-      u_pred = self.predict_user_state(future_user_embedding)
-      loss += CrossEntropyLoss(self.weight)(u_pred,next_state_label)
+      U_pred_state = self.predict_user_state(future_user_embedding)
 
-      return future_user_embedding,future_item_embedding,loss
+      return future_user_embedding,future_item_embedding,U_pred_state,j_tilde,j_true
