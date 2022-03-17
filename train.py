@@ -62,6 +62,8 @@ def train_rodie(t_batches,
       next_state = next_state.type(torch.LongTensor).to(device)
       next_item_dynamic_embedding = next_item_dynamic_embedding.to(device)
       next_item_static_embedding = next_item_static_embedding.to(device)
+      
+      # The forward pass of the model : extract dynamic embeddings (user+item ), and predicted user state and predicted item embedding
       future_user_embedding,future_item_embedding,U_pred_state,j_tilde,j_true  = model(item_embedding,
                 user_embedding,
                 u_static,
@@ -71,9 +73,11 @@ def train_rodie(t_batches,
                 delta_i,
                 next_state,
                 next_item_dynamic_embedding,
-                next_item_static_embedding) 
+                next_item_static_embedding)
+      # Add the new embedding to the placeholder U and I
       U[users_idx] = future_user_embedding.detach().clone()
-      I[items_idx] = future_item_embedding.detach().clone()     
+      I[items_idx] = future_item_embedding.detach().clone() 
+      
       # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
       loss = MSELoss()(j_tilde,j_true)
       loss += regularizer(user_embedding,future_user_embedding,lambda_u,
