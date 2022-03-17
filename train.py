@@ -1,23 +1,34 @@
 
-import torch 
-from model import *
-from preprocessing import *
- 
+from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
 
+import torch
+from  torch import nn
+from torch.nn import RNNCell
+from torch.nn.functional import one_hot
+import math
+from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
+from torch.nn import functional as F
 
-
+def regularizer(actual_user_embedding,future_user_embedding,lambda_u,
+                               actual_item_embedding,future_item_embedding,lambda_i
+                               ):
+    u_regularization_loss =  MSELoss()(actual_user_embedding,future_user_embedding)
+    i_regularization_loss =  MSELoss()(actual_item_embedding,future_item_embedding)
+    return lambda_u* u_regularization_loss + lambda_i* i_regularization_loss 
 
 
 def train_rodie(t_batches,
           data,
           U,
           I,
+          weight_ratio,
           model,
           optimizer,
           n_epochs,
           lambda_u,
           lambda_i,
-          device
+          device,
+
           ):
   print("Training...")
  # U_copy = U.clone().detach()
@@ -50,7 +61,7 @@ def train_rodie(t_batches,
       next_state = next_state.type(torch.LongTensor).to(device)
       next_item_dynamic_embedding = next_item_dynamic_embedding.to(device)
       next_item_static_embedding = next_item_static_embedding.to(device)
-      future_user_embedding,future_item_embedding,loss  = model(item_embedding,
+      future_user_embedding,future_item_embedding,U_pred_state,j_tilde,j_true  = model(item_embedding,
                 user_embedding,
                 u_static,
                 i_static,
@@ -60,13 +71,20 @@ def train_rodie(t_batches,
                 next_state,
                 next_item_dynamic_embedding,
                 next_item_static_embedding) 
-
       U[users_idx] = future_user_embedding.detach().clone()
-      I[items_idx] = future_item_embedding.detach().clone()
+      I[items_idx] = future_item_embedding.detach().clone()     
+      # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
+      loss = MSELoss()(j_tilde,j_true)
+      loss += regularizer(user_embedding,future_user_embedding,lambda_u,
+                            item_embedding,future_item_embedding,lambda_i
+                            )
+        
+      loss += CrossEntropyLoss(weight_ratio)(U_pred_state,next_state)
+
       #print(I[0])
       loss.backward()
       l += loss.item()
-      torch.nn.utils.clip_grad_norm_(model.parameters(),max_norm=1)
+      torch.nn.utils.clip_grad_norm_(model.parameters(),max_norm=1.)
       optimizer.step()
     print(I[0])
     print("Epoch {} Loss {}".format(e,l))
