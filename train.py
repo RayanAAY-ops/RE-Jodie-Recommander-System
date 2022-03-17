@@ -6,6 +6,7 @@ from  torch import nn
 from torch.nn import RNNCell
 from torch.nn.functional import one_hot
 import math
+from tqdm import tqdm
 from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
 from torch.nn import functional as F
 
