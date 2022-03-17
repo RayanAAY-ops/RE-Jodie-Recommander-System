@@ -8,9 +8,9 @@ def extract_data_mooc():
   labels = pd.read_csv("/content/act-mooc/mooc_action_labels.tsv",sep="\t")
   users = pd.read_csv("/content/act-mooc/mooc_actions.tsv",sep="\t")
 
-  print("features columns {}\n".format(features.columns))
-  print("labels columns {}".format(labels.columns)) 
-  print("users columns {}".format(users.columns)) 
+  #print("features columns {}\n".format(features.columns))
+  #print("labels columns {}".format(labels.columns)) 
+  #print("users columns {}".format(users.columns)) 
 
   join1 = labels.merge(users,left_index=True,right_index=True)#,on="ACTIONID")
 
@@ -149,3 +149,29 @@ def train_test_split(sort_data,prop_train):
   test_df = test_df.sort_values(["timestamp"])
 
   return train_df, test_df
+
+from sklearn.model_selection import StratifiedKFold
+def train_test_stratified_split(data):
+  X = data.sort_values(['timestamp'])[['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
+        'nextItemInteraction', 'f1', 'f2', 'f3', 'f4']].values 
+
+  y = data.sort_values(['timestamp'])['next_state_user'].values
+  skf = StratifiedKFold(n_splits=2)
+  skf.get_n_splits(X, y)
+
+  print(skf)
+
+  for train_index, test_index in skf.split(X, y):
+      #print("TRAIN:", train_index, "TEST:", test_index)
+      X_train, X_test = X[train_index], X[test_index]
+      y_train, y_test = y[train_index], y[test_index]
+
+  df_train = pd.DataFrame(np.concatenate((X_train,y_train.reshape(-1,1)),axis=1),columns=['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
+        'nextItemInteraction', 'f1', 'f2', 'f3', 'f4','next_state_user'])
+  df_train = df_train[data.columns]  
+
+  df_test = pd.DataFrame(np.concatenate((X_test,y_test.reshape(-1,1)),axis=1),columns=['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
+        'nextItemInteraction', 'f1', 'f2', 'f3', 'f4','next_state_user'])
+  df_test = df_test[data.columns]
+
+  return df_train,df_test
