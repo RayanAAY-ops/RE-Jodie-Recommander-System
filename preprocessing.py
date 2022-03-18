@@ -76,6 +76,11 @@ def UserNextInteraction(data_pandas):
   sort_data['nextItemInteraction'] = sort_data_numpy[:,-1]
   return sort_data.reindex(data_pandas.index)['nextItemInteraction'].astype('int')
 
+def PreviousItemInteraction(data_pandas):
+  data_pandas['PreviousItemInteraction'] = data_pandas['item_id'].shift(periods=1)
+  fisrt_row_users = data_pandas.groupby(['user_id']).head(1).index.values
+  data_pandas.loc[fisrt_row_users,'PreviousItemInteraction'] = -1
+  return data_pandas
 ### This function is used to compute delta_i and delta_u respectively for items and users ###
 # using the parameter "entity", you can choose to compute delta_i -> for item or delta_u -> for user
 def delta(data_pandas,entity):
@@ -151,9 +156,9 @@ def train_test_split(sort_data,prop_train):
   return train_df, test_df
 
 from sklearn.model_selection import StratifiedKFold
-def train_test_stratified_split(data):
+def train_test_stratified_split(data,interaction):
   X = data.sort_values(['timestamp'])[['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
-        'nextItemInteraction', 'f1', 'f2', 'f3', 'f4']].values 
+        interaction, 'f1', 'f2', 'f3', 'f4']].values 
 
   y = data.sort_values(['timestamp'])['next_state_user'].values
   skf = StratifiedKFold(n_splits=2)
@@ -167,11 +172,11 @@ def train_test_stratified_split(data):
       y_train, y_test = y[train_index], y[test_index]
 
   df_train = pd.DataFrame(np.concatenate((X_train,y_train.reshape(-1,1)),axis=1),columns=['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
-        'nextItemInteraction', 'f1', 'f2', 'f3', 'f4','next_state_user'])
+        interaction, 'f1', 'f2', 'f3', 'f4','next_state_user'])
   df_train = df_train[data.columns]  
 
   df_test = pd.DataFrame(np.concatenate((X_test,y_test.reshape(-1,1)),axis=1),columns=['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
-        'nextItemInteraction', 'f1', 'f2', 'f3', 'f4','next_state_user'])
+        interaction, 'f1', 'f2', 'f3', 'f4','next_state_user'])
   df_test = df_test[data.columns]
 
   return df_train,df_test
