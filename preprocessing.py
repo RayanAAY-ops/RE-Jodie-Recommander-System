@@ -80,7 +80,7 @@ def PreviousItemInteraction(data_pandas):
   data_pandas['PreviousItemInteraction'] = data_pandas['item_id'].shift(periods=1)
   fisrt_row_users = data_pandas.groupby(['user_id']).head(1).index.values
   data_pandas.loc[fisrt_row_users,'PreviousItemInteraction'] = -1
-  return data_pandas
+  return data_pandas['PreviousItemInteraction']
 ### This function is used to compute delta_i and delta_u respectively for items and users ###
 # using the parameter "entity", you can choose to compute delta_i -> for item or delta_u -> for user
 def delta(data_pandas,entity):
