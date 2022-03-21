@@ -59,7 +59,7 @@ def train_rodie(t_batches,
       optimizer.zero_grad()
       users_idx,items_idx = extractItemUserId(data,rows)
       state_label,delta_u,delta_i,f = extractFeatures(data,rows)
-      next_state,next_item = extractNextStateItem(data,rows)
+      next_item = extractPastItem(data,rows)
       u_static, i_static = model.static_users_embedding[users_idx].detach(), model.static_items_embedding[items_idx].detach()
 
 
@@ -71,7 +71,7 @@ def train_rodie(t_batches,
       f = f.to(device)
       delta_u = delta_u.to(device)
       delta_i = delta_i.to(device)
-      next_state = next_state.type(torch.LongTensor).to(device)
+      state_label = state_label.type(torch.LongTensor).to(device)
       next_item_dynamic_embedding = next_item_dynamic_embedding.to(device)
       next_item_static_embedding = next_item_static_embedding.to(device)
       
@@ -83,7 +83,7 @@ def train_rodie(t_batches,
                 f,
                 delta_u,
                 delta_i,
-                next_state,
+                
                 next_item_dynamic_embedding,
                 next_item_static_embedding)
       # Add the new embedding to the placeholder U and I
@@ -98,7 +98,6 @@ def train_rodie(t_batches,
                             )
       
       loss += CrossEntropyLoss(weight_ratio)(U_pred_state,state_label)
-
       #print(I[0])
       loss.backward()
       l += loss.item()
