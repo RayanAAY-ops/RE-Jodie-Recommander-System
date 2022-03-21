@@ -43,7 +43,7 @@ def train_rodie(t_batches,
           device,
 
           ):
-  print("ok")
+
   U,I = dynamic_embedding(data,model.embedding_dim)  # Initial dynamic embedding
     
   U = U.to(device)
