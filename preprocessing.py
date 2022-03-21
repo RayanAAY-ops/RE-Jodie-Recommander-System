@@ -35,10 +35,9 @@ def extractFeatures(data,idx):
     f = data[idx,8:]
     return state_label,delta_u,delta_i,f
 
-def extractNextStateItem(data,idx):
-    next_state  = data[idx,7]
+def extractPastItem(data,idx):
     next_item  = data[idx,6]
-    return next_state,next_item
+    return next_item
 
 
 
