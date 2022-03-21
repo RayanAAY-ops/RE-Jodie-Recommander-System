@@ -72,8 +72,8 @@ class RODIE(torch.nn.Module):
         )
 
         self.predictStateUser_MLP = torch.nn.Sequential(
-            torch.nn.ReLU(),
             nn.Linear(self.embedding_dim,self.MLP_h_dim),
+            torch.nn.ReLU(),
             nn.Linear(self.MLP_h_dim,2),
             #torch.nn.Softmax(dim=1)
             )
