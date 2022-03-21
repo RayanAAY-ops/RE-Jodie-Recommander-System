@@ -13,8 +13,8 @@ from torch.nn import functional as F
 def dynamic_embedding(data,embedding_dim):
         num_users = len(torch.unique(data[:,0]))
         num_items = len(torch.unique(data[:,1]))
-        dynamic_users_embedding = F.normalize(torch.randn(embedding_dim).repeat(num_users,1),dim=0)#nn.init.kaiming_uniform_(w, mode='fan_in', nonlinearity='relu')#F.normalize(torch.randn(num_users,embedding_dim))
-        dynamic_items_embedding = F.normalize(torch.randn(embedding_dim).repeat(num_items+1,1),dim=0)
+        dynamic_users_embedding = F.normalize(torch.randn(num_users,embedding_dim),dim=0)#F.normalize(nn.init.kaiming_uniform_(w, mode='fan_in', nonlinearity='relu')F.normalize(torch.randn(num_users,embedding_dim),dim=0)
+        dynamic_items_embedding = F.normalize(torch.randn(num_items+1,embedding_dim),dim=0)#F.normalize(torch.randn(embedding_dim).repeat(num_items+1,1),dim=0)
 
         print("Initialisation of dynamic embedding... Done !")
         print("Dynamic Embedding shape : Users {}, \t Items {}".format(list(dynamic_users_embedding.size()),list(dynamic_items_embedding.size())))
@@ -45,7 +45,7 @@ def train_rodie(t_batches,
           ):
 
   U,I = dynamic_embedding(data,model.embedding_dim)  # Initial dynamic embedding
-    
+  U_copy,I_copy = U.clone(), I.clone()
   U = U.to(device)
   I = I.to(device)
   print("Training...")
@@ -59,12 +59,12 @@ def train_rodie(t_batches,
       optimizer.zero_grad()
       users_idx,items_idx = extractItemUserId(data,rows)
       state_label,delta_u,delta_i,f = extractFeatures(data,rows)
-      next_item = extractPastItem(data,rows)
+      past_item = extractPastItem(data,rows)
       u_static, i_static = model.static_users_embedding[users_idx], model.static_items_embedding[items_idx]
 
 
       user_embedding, item_embedding = U[users_idx], I[items_idx]
-      next_item_static_embedding, next_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in next_item]], I[[int(x) for x in next_item]]
+      past_item_static_embedding, past_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in past_item]], I[[int(x) for x in past_item]]
 
       u_static = u_static.to(device)
       i_static = i_static.to(device)
@@ -72,8 +72,8 @@ def train_rodie(t_batches,
       delta_u = delta_u.to(device)
       delta_i = delta_i.to(device)
       state_label = state_label.type(torch.LongTensor).to(device)
-      next_item_dynamic_embedding = next_item_dynamic_embedding.to(device)
-      next_item_static_embedding = next_item_static_embedding.to(device)
+      past_item_dynamic_embedding = past_item_dynamic_embedding.to(device)
+      past_item_static_embedding = past_item_static_embedding.to(device)
       
       # The forward pass of the model : extract dynamic embeddings (user+item ), and predicted user state and predicted item embedding
       future_user_embedding,future_item_embedding,U_pred_state,j_tilde,j_true = model(item_embedding,
@@ -83,13 +83,13 @@ def train_rodie(t_batches,
                 f,
                 delta_u,
                 delta_i,
-                next_item_dynamic_embedding,
-                next_item_static_embedding)
+                past_item_dynamic_embedding,
+                past_item_static_embedding)
       # Add the new embedding to the placeholder U and I
       U[users_idx] = future_user_embedding.detach()
       I[items_idx] = future_item_embedding.detach()
       
-      # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
+      # Return loss value between the predicted embedding "j_tilde" and the real past item embedding j_true
       
       loss = MSELoss()(j_tilde,j_true)#.detach()
       loss += regularizer(user_embedding.detach(),future_user_embedding,lambda_u,
@@ -100,10 +100,11 @@ def train_rodie(t_batches,
       #print(I[0])
       loss.backward()
       l += loss.item()
-     # torch.nn.utils.clip_grad_norm_(model.parameters(),max_norm=100.)
       optimizer.step()
-
+    
     #scheduler.step(loss)
+    print(U_copy)
     print("Epoch {} Loss {}".format(e,l))
-
+    if e != n_epochs-1:
+      U,I = U_copy.to(device).clone(),I_copy.to(device).clone()
   return model,U,I
