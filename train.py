@@ -10,6 +10,16 @@ from tqdm import tqdm
 from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
 from torch.nn import functional as F
 
+def dynamic_embedding(data,embedding_dim):
+        num_users = len(torch.unique(data[:,0]))
+        num_items = len(torch.unique(data[:,1]))
+        dynamic_users_embedding = F.normalize(torch.randn(num_users,embedding_dim),dim=0)#nn.init.kaiming_uniform_(w, mode='fan_in', nonlinearity='relu')#F.normalize(torch.randn(num_users,embedding_dim))
+        dynamic_items_embedding = F.normalize(torch.randn(num_items+1,embedding_dim),dim=0)
+
+        print("Initialisation of dynamic embedding... Done !")
+        print("Dynamic Embedding shape : Users {}, \t Items {}".format(list(dynamic_users_embedding.size()),list(dynamic_items_embedding.size())))
+
+        return dynamic_users_embedding,dynamic_items_embedding
 
 
 
@@ -33,7 +43,8 @@ def train_rodie(t_batches,
           device,
 
           ):
-  U,I = dynamic_embedding(data_torch2,embedding_dim)  # Initial dynamic embedding
+  print("ok")
+  U,I = dynamic_embedding(data,model.embedding_dim)  # Initial dynamic embedding
     
   U = U.to(device)
   I = I.to(device)
