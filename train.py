@@ -60,11 +60,11 @@ def train_rodie(t_batches,
       users_idx,items_idx = extractItemUserId(data,rows)
       state_label,delta_u,delta_i,f = extractFeatures(data,rows)
       next_item = extractPastItem(data,rows)
-      u_static, i_static = model.static_users_embedding[users_idx].detach(), model.static_items_embedding[items_idx].detach()
+      u_static, i_static = model.static_users_embedding[users_idx], model.static_items_embedding[items_idx]
 
 
       user_embedding, item_embedding = U[users_idx], I[items_idx]
-      next_item_static_embedding, next_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in next_item]].detach(), I[[int(x) for x in next_item]].detach()
+      next_item_static_embedding, next_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in next_item]], I[[int(x) for x in next_item]]
 
       u_static = u_static.to(device)
       i_static = i_static.to(device)
@@ -83,12 +83,11 @@ def train_rodie(t_batches,
                 f,
                 delta_u,
                 delta_i,
-                
                 next_item_dynamic_embedding,
                 next_item_static_embedding)
       # Add the new embedding to the placeholder U and I
-      U[users_idx] = future_user_embedding.detach().clone()
-      I[items_idx] = future_item_embedding.detach().clone() 
+      U[users_idx] = future_user_embedding.detach()
+      I[items_idx] = future_item_embedding.detach()
       
       # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
       
