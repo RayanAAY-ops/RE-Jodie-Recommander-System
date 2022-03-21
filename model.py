@@ -147,7 +147,6 @@ class RODIE(torch.nn.Module):
                 f,
                 delta_u,
                 delta_i,
-                next_state_label,
                 past_item_dynamic_embedding,
                 past_item_static_embedding              
                 ):
