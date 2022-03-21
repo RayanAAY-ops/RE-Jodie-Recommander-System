@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import torch
 from collections import defaultdict
 
 def extract_data_mooc():
