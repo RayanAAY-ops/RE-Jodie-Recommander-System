@@ -93,11 +93,11 @@ def train_rodie(t_batches,
       # Return loss value between the predicted embedding "j_tilde" and the real next item embedding j_true
       
       loss = MSELoss()(j_tilde,j_true)#.detach()
-      loss += regularizer(user_embedding,future_user_embedding,lambda_u,
-                            item_embedding,future_item_embedding,lambda_i
+      loss += regularizer(user_embedding.detach(),future_user_embedding,lambda_u,
+                            item_embedding.detach(),future_item_embedding,lambda_i
                             )
       
-      loss += CrossEntropyLoss(weight_ratio)(U_pred_state,next_state)
+      loss += CrossEntropyLoss(weight_ratio)(U_pred_state,state_label)
 
       #print(I[0])
       loss.backward()
