@@ -1,5 +1,6 @@
 from sklearn.metrics import roc_auc_score
 import seaborn as sns
+from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from preprocessing import *
 from model import *

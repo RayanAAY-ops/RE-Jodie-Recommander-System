@@ -105,6 +105,12 @@ def train_rodie(t_batches,
     print("Epoch {} Loss {}".format(e,l))
     if e != n_epochs-1:
       U,I = U_copy.to(device).clone(),I_copy.to(device).clone()
+
+    if e%2 ==0
+      torch.save(model.state_dict(), "model_ep{}".format(e))
+
+    print("Saving the model ...")
+    torch.save(model.state_dict(), "modelFinal_ep{}".format(e))
   return model,U,I
 
 
