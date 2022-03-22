@@ -13,8 +13,8 @@ from torch.nn import functional as F
 def dynamic_embedding(data,embedding_dim):
         num_users = len(torch.unique(data[:,0]))
         num_items = len(torch.unique(data[:,1]))
-        dynamic_users_embedding = F.normalize(torch.rand(embedding_dim).repeat(num_users,1),dim=0)
-        dynamic_items_embedding = F.normalize(torch.rand(embedding_dim).repeat(num_items+1,1),dim=0)
+        dynamic_users_embedding = F.normalize(torch.rand(embedding_dim),dim=0).repeat(num_users,1)
+        dynamic_items_embedding = F.normalize(torch.rand(embedding_dim).repeat(num_items+1,1),dim=0).repeat(num_users,1)
 
         print("Initialisation of dynamic embedding... Done !")
         print("Dynamic Embedding shape : Users {}, \t Items {}".format(list(dynamic_users_embedding.size()),list(dynamic_items_embedding.size())))
