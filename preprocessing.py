@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+import itertools
 from collections import defaultdict
 
 def extract_data_mooc():
@@ -9,12 +10,7 @@ def extract_data_mooc():
   labels = pd.read_csv("/content/act-mooc/mooc_action_labels.tsv",sep="\t")
   users = pd.read_csv("/content/act-mooc/mooc_actions.tsv",sep="\t")
 
-  #print("features columns {}\n".format(features.columns))
-  #print("labels columns {}".format(labels.columns)) 
-  #print("users columns {}".format(users.columns)) 
-
   join1 = labels.merge(users,left_index=True,right_index=True)#,on="ACTIONID")
-
   join2 = join1.merge(features,left_index=True,right_index=True)
 
   join2 = join2[["USERID","TARGETID","TIMESTAMP","LABEL","FEATURE0","FEATURE1","FEATURE2","FEATURE3"]]
@@ -38,8 +34,6 @@ def extractFeatures(data,idx):
 def extractPastItem(data,idx):
     next_item  = data[idx,6]
     return next_item
-
-
 
 ### This function enables to extract the next label of each user at t+1 
 def extractNextUserState(data_pandas):
@@ -107,8 +101,6 @@ def delta(data_pandas,entity):
     except IndexError as e:
         pass
   
-  print("delta {}".format(entity))
-
   sort_data['delta_{}'.format(entity)] = sort_data_numpy[:,-1]
   return sort_data.reindex(data_pandas.index)['delta_{}'.format(entity)].astype('int')
 
@@ -138,7 +130,7 @@ def t_batch_update(data):
     tbatch_id_item[id_item] = index_tbatch
 
     tbatch_interaction[index_tbatch].append(j)
-
+  print("Number of batch = {}".format(len(tbatch_interaction)))
   print("T-Batch ends !")
   return tbatch_interaction
 
@@ -162,28 +154,19 @@ def train_test_split(sort_data,prop_train):
 
   return train_df, test_df
 
-from sklearn.model_selection import StratifiedKFold
-def train_test_stratified_split(data,interaction):
-  X = data.sort_values(['timestamp'])[['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
-        interaction, 'f1', 'f2', 'f3', 'f4']].values 
+def t_batch_train_test(data, t_batches,nb_batch_train):
+  # Test le modèle sur peu de données
+  interactions_ = []
+  t_batch_train = dict(itertools.islice(t_batches.items(), nb_batch_train))
+  number_of_interactions = 0
+  for x,y in t_batch_train.items():
+    number_of_interactions +=(len(y))
+    interactions_.append(y)
+  interactions_train = list(itertools.chain(*interactions_)) # Flatten the list of list
+  number_interactions_test = len(data) - number_of_interactions
 
-  y = data.sort_values(['timestamp'])['next_state_user'].values
-  skf = StratifiedKFold(n_splits=2)
-  skf.get_n_splits(X, y)
-
-  print(skf)
-
-  for train_index, test_index in skf.split(X, y):
-      #print("TRAIN:", train_index, "TEST:", test_index)
-      X_train, X_test = X[train_index], X[test_index]
-      y_train, y_test = y[train_index], y[test_index]
-
-  df_train = pd.DataFrame(np.concatenate((X_train,y_train.reshape(-1,1)),axis=1),columns=['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
-        interaction, 'f1', 'f2', 'f3', 'f4','next_state_user'])
-  df_train = df_train[data.columns]  
-
-  df_test = pd.DataFrame(np.concatenate((X_test,y_test.reshape(-1,1)),axis=1),columns=['user_id', 'item_id', 'timestamp', 'state_label', 'delta_u', 'delta_i',
-        interaction, 'f1', 'f2', 'f3', 'f4','next_state_user'])
-  df_test = df_test[data.columns]
-
-  return df_train,df_test
+  print("Train : Number of interactions in {} batches is equal to {}".format(nb_batch_train,number_of_interactions))
+  print("Test : Number of interactions is equal to {}".format(number_interactions_test))
+  test = data.drop(interactions_train)
+  interactions_test = test.index.values.tolist()
+  return t_batch_train, test, interactions_train, interactions_test

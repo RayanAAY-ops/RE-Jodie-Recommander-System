@@ -49,9 +49,7 @@ def train_rodie(t_batches,
   U = U.to(device)
   I = I.to(device)
   print("Training...")
- # U_copy = U.clone().detach()
- # I_copy = I.clone().detach()
-  #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+  scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
   for e in range(n_epochs):
     l = 0
     
@@ -102,9 +100,11 @@ def train_rodie(t_batches,
       l += loss.item()
       optimizer.step()
     
-    #scheduler.step(loss)
+    scheduler.step(loss)
     print(U_copy)
     print("Epoch {} Loss {}".format(e,l))
     if e != n_epochs-1:
       U,I = U_copy.to(device).clone(),I_copy.to(device).clone()
   return model,U,I
+
+
