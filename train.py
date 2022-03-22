@@ -49,7 +49,7 @@ def train_rodie(t_batches,
   U = U.to(device)
   I = I.to(device)
   print("Training...")
-  scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+  scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,min_lr=8e-5,mode='min',patience=1)
   for e in range(n_epochs):
     l = 0
     
