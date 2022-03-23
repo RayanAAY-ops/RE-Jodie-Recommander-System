@@ -34,7 +34,6 @@ def train_rodie(t_batches,
           weight_ratio_train,
           weight_ratio_valid,
           model,
-          optimizer,
           learning_rate,
           n_epochs,
           lambda_u,
@@ -48,7 +47,7 @@ def train_rodie(t_batches,
   initial_item_embedding = nn.Parameter(F.normalize(torch.rand(32).to(device), dim=0))
   model.initial_user_embedding = initial_user_embedding
   model.initial_item_embedding = initial_item_embedding
-  optimizer = torch.optim.Adam(model.parameters())
+  optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-5)
   #for name, param in model.named_parameters():
   #  if param.requires_grad:
   #    print(name, param.data)
