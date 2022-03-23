@@ -44,15 +44,14 @@ def train_rodie(t_batches,
 
           ):
 
-  U,I = dynamic_embedding(data,model.embedding_dim)  # Initial dynamic embedding
-  U_copy,I_copy = U.clone(), I.clone()
-  U = U.to(device)
-  I = I.to(device)
+  loss_list = []
   print("Training...")
-  scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,min_lr=1e-4,mode='min',patience=2)
   for e in range(n_epochs):
     l = 0
-    
+    U,I = dynamic_embedding(data,model.embedding_dim)  # Initial dynamic embedding
+ # U_copy,I_copy = U.clone(), I.clone()
+    U = U.to(device)
+    I = I.to(device)
     for (_,rows),_ in zip(t_batches.items(),tqdm(range(len(t_batches)), position=0, leave=True)):
       optimizer.zero_grad()
       users_idx,items_idx = extractItemUserId(data,rows)
@@ -99,18 +98,14 @@ def train_rodie(t_batches,
       loss.backward()
       l += loss.item()
       optimizer.step()
-    
-   # scheduler.step(loss)
-    print(U_copy)
+    print(U)
     print("Epoch {} Loss {}".format(e,l))
-    if e != n_epochs-1:
-      U,I = U_copy.to(device).clone(),I_copy.to(device).clone()
-
+    loss_list.append(l)
     if e%2 ==0:
       torch.save(model.state_dict(), "model_ep{}".format(e))
 
     print("Saving the model ...")
     torch.save(model.state_dict(), "modelFinal_ep{}".format(e))
-  return model,U,I
+  return model,U,I,loss_list
 
 
