@@ -108,7 +108,7 @@ def train_rodie(t_batches,
       train_err += loss.item()
       optimizer.step()
 
-    y, pred,auc,valid_err = test_rodie(valid_data,weight_ratio_valid,U, I, data, model, device)
+    y, pred,_,_,auc,valid_err = test_rodie(valid_data,,weight_ratio_valid,U, I, data, model, device)
     losses_train.append(train_err/len(train_interactions))
     losses_valid.append(valid_err/(len(data)-len(train_interactions)))
 
@@ -122,11 +122,4 @@ def train_rodie(t_batches,
     print("Saving the model ...")
     torch.save(model.state_dict(), "modelFinal_ep{}".format(e))
   return model,U,I,losses_train,losses_valid
-
-
-
-
-
-
-
 

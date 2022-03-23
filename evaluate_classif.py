@@ -73,7 +73,7 @@ def test_rodie(test,weight_ratio_test,U,I,data,model,device):
 
 
   auc = roc_auc_score(y_true, y_pred)
-  return y_true, y_pred, auc,l
+  return y_true, y_pred,U,I, auc,l
 
 
 
