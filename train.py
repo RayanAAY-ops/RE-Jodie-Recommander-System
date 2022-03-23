@@ -16,25 +16,7 @@ import matplotlib.pyplot as plt
 from preprocessing import *
 from model import *
 from tqdm import tqdm
-
-from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
-from preprocessing import *
-import torch
-from  torch import nn
-from torch.nn import RNNCell
-from torch.nn.functional import one_hot
-import math
-from tqdm import tqdm
-from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
-from torch.nn import functional as F
-from sklearn.metrics import roc_auc_score
-import seaborn as sns
-from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
-from preprocessing import *
-from model import *
-from tqdm import tqdm
-
+from evaluate_classif import test_rodie
 
 from torch.utils.data import DataLoader
 def dynamic_embedding(data,embedding_dim):

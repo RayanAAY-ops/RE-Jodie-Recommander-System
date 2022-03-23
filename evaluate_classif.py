@@ -4,8 +4,18 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from preprocessing import *
 from model import *
+from torch.nn import MSELoss, CrossEntropyLoss
 from tqdm import tqdm
 from torch.utils.data import DataLoader
+
+def regularizer(actual_user_embedding,future_user_embedding,lambda_u,
+                               actual_item_embedding,future_item_embedding,lambda_i
+                               ):
+    u_regularization_loss =  MSELoss()(actual_user_embedding,future_user_embedding)
+    i_regularization_loss =  MSELoss()(actual_item_embedding,future_item_embedding)
+    return lambda_u* u_regularization_loss + lambda_i* i_regularization_loss 
+
+
 def test_rodie(test,weight_ratio_test,U,I,data,model,device):
   model.eval() # Evaluation mode 
   test_dataloader = DataLoader(test.astype(np.float32).values, batch_size=512, shuffle=False)
