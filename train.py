@@ -9,7 +9,34 @@ import math
 from tqdm import tqdm
 from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
 from torch.nn import functional as F
+from sklearn.metrics import roc_auc_score
+import seaborn as sns
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+from preprocessing import *
+from model import *
+from tqdm import tqdm
 
+from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
+from preprocessing import *
+import torch
+from  torch import nn
+from torch.nn import RNNCell
+from torch.nn.functional import one_hot
+import math
+from tqdm import tqdm
+from torch.nn import MSELoss, HuberLoss,L1Loss,CrossEntropyLoss
+from torch.nn import functional as F
+from sklearn.metrics import roc_auc_score
+import seaborn as sns
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+from preprocessing import *
+from model import *
+from tqdm import tqdm
+
+
+from torch.utils.data import DataLoader
 def dynamic_embedding(data,embedding_dim):
         num_users = len(torch.unique(data[:,0]))
         num_items = len(torch.unique(data[:,1]))
@@ -33,7 +60,10 @@ def regularizer(actual_user_embedding,future_user_embedding,lambda_u,
 
 def train_rodie(t_batches,
           data,
-          weight_ratio,
+          valid_data,
+          train_interactions,
+          weight_ratio_train,
+          weight_ratio_valid,
           model,
           optimizer,
           learning_rate,
@@ -41,13 +71,12 @@ def train_rodie(t_batches,
           lambda_u,
           lambda_i,
           device,
-
           ):
-
-  loss_list = []
+  losses_train = []
+  losses_valid = []
   print("Training...")
   for e in range(n_epochs):
-    l = 0
+    train_err = 0
     U,I = dynamic_embedding(data,model.embedding_dim)  # Initial dynamic embedding
  # U_copy,I_copy = U.clone(), I.clone()
     U = U.to(device)
@@ -92,20 +121,30 @@ def train_rodie(t_batches,
       loss += regularizer(user_embedding.detach(),future_user_embedding,lambda_u,
                             item_embedding.detach(),future_item_embedding,lambda_i
                             )
-      
-      loss += CrossEntropyLoss(weight_ratio)(U_pred_state,state_label)
-      #print(I[0])
+      loss += CrossEntropyLoss(weight_ratio_train)(U_pred_state,state_label)
       loss.backward()
-      l += loss.item()
+      train_err += loss.item()
       optimizer.step()
-    print(U)
-    print("Epoch {} Loss {}".format(e,l))
-    loss_list.append(l)
+
+    y, pred,auc,valid_err = test_rodie(valid_data,weight_ratio_valid,U, I, data, model, device)
+    losses_train.append(train_err/len(train_interactions))
+    losses_valid.append(valid_err/(len(data)-len(train_interactions)))
+
+    print("validation interactions {}".format(len(data)-len(train_interactions)))
+    print("Epoch {} Train Loss {}".format(e,losses_train[e]))
+    print("Epoch {} Validation Loss {} , AUC Score {}".format(e,losses_valid[e],auc))
+
     if e%2 ==0:
       torch.save(model.state_dict(), "model_ep{}".format(e))
 
     print("Saving the model ...")
     torch.save(model.state_dict(), "modelFinal_ep{}".format(e))
-  return model,U,I,loss_list
+  return model,U,I,losses_train,losses_valid
+
+
+
+
+
+
 
 

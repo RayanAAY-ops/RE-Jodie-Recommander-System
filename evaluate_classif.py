@@ -6,13 +6,17 @@ from preprocessing import *
 from model import *
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-def test_rodie(test,U,I,data,model,device):
+def test_rodie(test,weight_ratio_test,U,I,data,model,device):
   model.eval() # Evaluation mode 
   test_dataloader = DataLoader(test.astype(np.float32).values, batch_size=512, shuffle=False)
   y_true = []
   y_pred = []
   print("Testing...")
   test_index = test.index.values.tolist()
+  l = 0
+  lambda_u = 1
+  lambda_i = 1
+  model.eval()
   with torch.no_grad():
     for (_,x),_ in zip(enumerate(test_dataloader),tqdm(range(len(test_dataloader)),position=0,leave=True)):
       users_idx,items_idx = x[:,0].tolist(), x[:,1].tolist()
@@ -33,7 +37,7 @@ def test_rodie(test,U,I,data,model,device):
       past_item_static_embedding = past_item_static_embedding.to(device)
 
       # The forward pass of the model : extract dynamic embeddings (user+item), and predicted user state and predicted item embedding
-      future_user_embedding,future_item_embedding,U_pred_state,_,_ = model(item_embedding,
+      future_user_embedding,future_item_embedding,U_pred_state,j_tilde,j_true = model(item_embedding,
                 user_embedding,
                 u_static,
                 i_static,
@@ -49,7 +53,8 @@ def test_rodie(test,U,I,data,model,device):
 
       y_true.append(state_label.detach().cpu().numpy())
       y_pred.append(U_pred_state.detach().cpu().numpy()[:,1])
-    
+      loss = MSELoss()(j_tilde,j_true) + regularizer(user_embedding.detach(),future_user_embedding,lambda_u,item_embedding.detach(),future_item_embedding,lambda_i) + CrossEntropyLoss(weight_ratio_test)(U_pred_state,state_label) 
+      l +=loss.item() 
   y_true=[x.tolist() for x in y_true] # Convert list of numpy array to list of list
   y_true= sum(y_true, [])  # Convert list of list to list
 
@@ -58,8 +63,7 @@ def test_rodie(test,U,I,data,model,device):
 
 
   auc = roc_auc_score(y_true, y_pred)
-  print("\n AUC Score = {}".format(auc))
-  return y_true, y_pred, auc
+  return y_true, y_pred, auc,l
 
 
 
