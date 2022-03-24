@@ -56,7 +56,7 @@ def train_rodie(t_batches,
    # print(initial_item_embedding)
    # print("\n")
    # print("BEGIN ... \n")
-
+    optimizer.zero_grad()
     U = initial_user_embedding.repeat(7047, 1) # initialize all users to the same embedding 
     I = initial_item_embedding.repeat(98, 1) # initialize all items to the same embedding
     U_copy, I_copy = U.detach().clone(), I.detach().clone()
@@ -104,6 +104,7 @@ def train_rodie(t_batches,
                             )
       loss += CrossEntropyLoss(weight_ratio_train)(U_pred_state,state_label)
       loss.backward()
+      torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0, norm_type=2.0)
       train_err += loss.item()
       optimizer.step()
     #print("END EPOCH : EMbeddings after update \n")
@@ -121,7 +122,7 @@ def train_rodie(t_batches,
       torch.save(model.state_dict(), "model_ep{}".format(e))
     print("Saving the model ...")
 
-
-    torch.save(model.state_dict(), "modelFinal_ep{}".format(e))
+    if e == n_epochs - 1:
+      torch.save(model.state_dict(), "modelFinal_ep{}".format(e))
   return model,U_copy,I_copy,losses_train,losses_valid
 
