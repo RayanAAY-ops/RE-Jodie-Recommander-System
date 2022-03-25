@@ -71,8 +71,8 @@ def train_rodie(t_batches,
       u_static, i_static = model.static_users_embedding[users_idx], model.static_items_embedding[items_idx]
 
 
-      user_embedding, item_embedding = U[users_idx], I[items_idx]
-      past_item_static_embedding, past_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in past_item]], I[[int(x) for x in past_item]]
+      user_embedding, item_embedding = U_copy[users_idx], I_copy[items_idx]
+      past_item_static_embedding, past_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in past_item]], I_copy[[int(x) for x in past_item]]
 
       u_static = u_static.to(device)
       i_static = i_static.to(device)
@@ -104,12 +104,13 @@ def train_rodie(t_batches,
                             )
       loss += CrossEntropyLoss(weight_ratio_train)(U_pred_state,state_label)
       loss.backward()
-      torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0, norm_type=2.0)
+      torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0, norm_type=10.0)
       train_err += loss.item()
       optimizer.step()
     #print("END EPOCH : EMbeddings after update \n")
     #print(initial_item_embedding)
 
+    
     y, pred,_,_,auc,valid_err = test_rodie(valid_data,weight_ratio_valid,U_copy, I_copy, data, model, device)
     losses_train.append(train_err/len(train_interactions))
     losses_valid.append(valid_err/(len(data)-len(train_interactions)))
