@@ -16,7 +16,7 @@ def regularizer(actual_user_embedding,future_user_embedding,lambda_u,
     return lambda_u* u_regularization_loss + lambda_i* i_regularization_loss 
 
 
-def test_rodie(test,weight_ratio_test,U,I,data,model,device):
+def test_rodie(test,weight_ratio_test,U_,I_,data,model,device):
   model.eval() # Evaluation mode 
   test_dataloader = DataLoader(test.astype(np.float32).values, batch_size=512, shuffle=False)
   y_true = []
@@ -34,8 +34,8 @@ def test_rodie(test,weight_ratio_test,U,I,data,model,device):
       state_label,delta_u,delta_i,f = x[:,3], x[:,4],x[:,5],x[:,8:]
       past_item = x[:,6]
       u_static, i_static = model.static_users_embedding[users_idx], model.static_items_embedding[items_idx]
-      user_embedding, item_embedding = U[users_idx], I[items_idx]
-      past_item_static_embedding, past_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in past_item]], I[[int(x) for x in past_item]]
+      user_embedding, item_embedding = U_[users_idx], I_[items_idx]
+      past_item_static_embedding, past_item_dynamic_embedding = model.static_items_embedding[[int(x) for x in past_item]], I_[[int(x) for x in past_item]]
 
       u_static = u_static.to(device)
       i_static = i_static.to(device)
@@ -58,8 +58,8 @@ def test_rodie(test,weight_ratio_test,U,I,data,model,device):
                 past_item_static_embedding)
       # Add the new embedding to the placeholder U and I
 
-      U[users_idx] = future_user_embedding.detach()
-      I[items_idx] = future_item_embedding.detach()
+      U_[users_idx] = future_user_embedding.detach()
+      I_[items_idx] = future_item_embedding.detach()
 
       y_true.append(state_label.detach().cpu().numpy())
       y_pred.append(U_pred_state.detach().cpu().numpy()[:,1])
@@ -73,7 +73,7 @@ def test_rodie(test,weight_ratio_test,U,I,data,model,device):
 
 
   auc = roc_auc_score(y_true, y_pred)
-  return y_true, y_pred,U,I, auc,l
+  return y_true, y_pred,U_,I_, auc,l
 
 
 
