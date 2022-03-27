@@ -24,8 +24,10 @@ def train_rodie(t_batches,
   all_user_indexes = set(range(0,7047))
   all_item_indexes = set(range(0,98))
 
-  initial_user_embedding = F.normalize(torch.rand(128).to(device), dim=0) # the initial user and item embeddings are learned during training as well
-  initial_item_embedding = F.normalize(torch.rand(128).to(device), dim=0)
+  initial_user_embedding = torch.nn.Parameter(F.normalize(torch.rand(128).to(device), dim=0)) # the initial user and item embeddings are learned during training as well
+  initial_item_embedding = torch.nn.Parameter(F.normalize(torch.rand(128).to(device), dim=0))
+  model.initial_user_embedding = initial_user_embedding
+  model.initial_item_embedding = initial_item_embedding
   optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate,weight_decay=1e-5)
   for name, param in model.named_parameters():
     if param.requires_grad:
@@ -39,7 +41,7 @@ def train_rodie(t_batches,
     train_err = 0
     #print("END EPOCH : Users Embeddings after update EPOCH 2 \n")
     #print(I)
-    for (_,rows),_ in zip(t_batches.items(),tqdm(range(len(t_batches)), position=0, leave=True)):
+    for (_,rows),t in zip(t_batches.items(),tqdm(range(len(t_batches)), position=0, leave=True)):
       optimizer.zero_grad()
       users_idx,items_idx = extractItemUserId(data,rows)
       l1.append(users_idx)
@@ -75,25 +77,28 @@ def train_rodie(t_batches,
       loss += regularizer(user_embedding.detach(),future_user_embedding,lambda_u,
                             item_embedding.detach(),future_item_embedding,lambda_i
                             )
+
       loss += CrossEntropyLoss(weight_ratio_train)(U_pred_state,state_label)
       loss.backward()
       train_err += loss.item()
       optimizer.step()
+      U.detach()[users_idx] = future_user_embedding.detach()
+      I.detach()[items_idx] = future_item_embedding.detach()    
+      if t % 100 == 0:
+        try:
 
-      try:      
-        l1 = pd.unique(sum(l1,[])).tolist()
-        l2 = pd.unique(sum(l2,[])).tolist()
-      except:
-        l1 = pd.unique(flatten(l1)).tolist()
-        l2 = pd.unique(flatten(l2)).tolist()
-              
-      U[~np.isin(np.arange(0,7047), l1)] = initial_user_embedding.repeat(np.sum(~np.isin(np.arange(7047), l1)),1)
-      I[~np.isin(np.arange(98), l2)] = initial_item_embedding.repeat(np.sum(~np.isin(np.arange(98), l2)),1)
-      U[users_idx] = future_user_embedding.detach()
-      I[items_idx] = future_item_embedding.detach()
-
-     # l1 = sum(l1,[])
-     # l2 = sum(l2,[])
+          l1 = pd.unique(sum(l1,[])).tolist()
+          l2 = pd.unique(sum(l2,[])).tolist()
+        except:
+          l1 = pd.unique(flatten(l1)).tolist()
+          l2 = pd.unique(flatten(l2)).tolist()          
+        #print(l1)
+        #print(l2)
+        U.detach()[~np.isin(np.arange(0,7047), l1)] = initial_user_embedding.repeat(np.sum(~np.isin(np.arange(7047), l1)),1)
+        I.detach()[~np.isin(np.arange(98), l2)] = initial_item_embedding.repeat(np.sum(~np.isin(np.arange(98), l2)),1)
+        #print("Shape ",U.detach()[~np.isin(np.arange(0,7047), l1)].shape)
+        #print("Shape ",I.detach()[~np.isin(np.arange(98), l2)].shape)
+        
     y, pred,_,_,auc,valid_err = test_rodie(valid_data,weight_ratio_valid,U.detach().clone(), I.detach().clone(), data, model, device)
 
     losses_train.append(train_err/len(train_interactions))
