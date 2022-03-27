@@ -35,8 +35,8 @@ class RODIE(torch.nn.Module):
 
         num_items = len(torch.unique(data[:,1]))
 
-       # self.initial_user_embedding = nn.Parameter(torch.Tensor(self.embedding_dim))
-       # self.initial_item_embedding = nn.Parameter(torch.Tensor(self.embedding_dim))
+        self.initial_user_embedding = nn.Parameter(torch.Tensor(self.embedding_dim))
+        self.initial_item_embedding = nn.Parameter(torch.Tensor(self.embedding_dim))
         print("Number of users of {} \n Number of items {} \n".format(num_users,num_items))
         print("Dataset size {}".format(list(self.data.size())))
         # Initialize static  embeddings
