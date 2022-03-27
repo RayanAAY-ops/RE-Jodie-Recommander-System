@@ -1,6 +1,3 @@
-
-
-
 def regularizer(actual_user_embedding,future_user_embedding,lambda_u,
                                actual_item_embedding,future_item_embedding,lambda_i
                                ):
@@ -47,7 +44,6 @@ def train_rodie(t_batches,
       users_idx,items_idx = extractItemUserId(data,rows)
       l1.append(users_idx)
       l2.append(items_idx)
-
       state_label,delta_u,delta_i,f = extractFeatures(data,rows)
       past_item = extractPastItem(data,rows)
       u_static, i_static = model.static_users_embedding[users_idx], model.static_items_embedding[items_idx]
@@ -84,21 +80,21 @@ def train_rodie(t_batches,
       train_err += loss.item()
       optimizer.step()
 
-      users_list = all_user_indexes.difference(set(list(dict.fromkeys(sum(l1,[])))))
-
-      items_list = all_item_indexes.difference(set(list(dict.fromkeys(sum(l2,[])))))
-      
-    #  U[users_list] = initial_user_embedding.repeat(len(users_list),1)
-    #  I[items_list] = initial_item_embedding.repeat(len(items_list),1)
+      try:      
+        l1 = pd.unique(sum(l1,[])).tolist()
+        l2 = pd.unique(sum(l2,[])).tolist()
+      except:
+        l1 = pd.unique(flatten(l1)).tolist()
+        l2 = pd.unique(flatten(l2)).tolist()
+              
+      U[~np.isin(np.arange(0,7047), l1)] = initial_user_embedding.repeat(np.sum(~np.isin(np.arange(7047), l1)),1)
+      I[~np.isin(np.arange(98), l2)] = initial_item_embedding.repeat(np.sum(~np.isin(np.arange(98), l2)),1)
       U[users_idx] = future_user_embedding.detach()
       I[items_idx] = future_item_embedding.detach()
-    #print("END EPOCH : EMbeddings after update \n")
-    #print(initial_item_embedding)
-     # l1 = list(dict.fromkeys(sum(l1,[])))
-     # l2 = list(dict.fromkeys(sum(l2,[])))
-    print(U)
+
+     # l1 = sum(l1,[])
+     # l2 = sum(l2,[])
     y, pred,_,_,auc,valid_err = test_rodie(valid_data,weight_ratio_valid,U.detach().clone(), I.detach().clone(), data, model, device)
-    print(U)
 
     losses_train.append(train_err/len(train_interactions))
     losses_valid.append(valid_err/(len(data)-len(train_interactions)))
@@ -114,4 +110,3 @@ def train_rodie(t_batches,
     if e == n_epochs - 1:
       torch.save(model.state_dict(), "modelFinal_ep{}".format(e))
   return model,U,I,losses_train,losses_valid
-
