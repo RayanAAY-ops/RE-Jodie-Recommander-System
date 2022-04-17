@@ -125,8 +125,8 @@ class RODIE(torch.nn.Module):
     def predict_item_embedding(self,
         u_projection,
         i_dynamic,
-        u_static,
-        i_static
+        i_static,
+        u_static
         ):
         concatenated_input = torch.cat([u_projection,i_dynamic,i_static,u_static],dim=1)
         j_tilde = self.predictItem_layer(concatenated_input)
